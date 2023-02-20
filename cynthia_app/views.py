@@ -21,6 +21,10 @@ from rest_framework.authtoken.models import Token
 
 from cynthia_app.models import Features, Member
 from cynthia_app.utils import send_reset_email
+from rest_framework import generics
+from rest_framework.views import APIView
+
+# from .serializers import UserSerializer
 
 
 class SignupSerializer(serializers.ModelSerializer):
@@ -38,42 +42,23 @@ class SignupSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         user = User.objects.create_user(
             validated_data['email'].split('@'),
-            validated_data['email'],
-
-            is_active=True
+            validated_data['email']
         )
         user.set_password(validated_data['password'])
         # Token.objects.create(user=user)
         return user
 
 
-from rest_framework import generics
-# from .serializers import UserSerializer
-
-
 class RegisterUserView(generics.CreateAPIView):
     serializer_class = SignupSerializer
 
-    def send_activation_email(self, email, user):
-        subject = 'Activate Your Account'
-        message = render_to_string('email.html', {
-            'user': user,
-            'domain': 'localhost:8000',
-            'uid': urlsafe_base64_encode(force_bytes(user.id)),
-            'token': default_token_generator.make_token(user),
-        })
-        # message = f'http://localhost:8000/activate/{user_id}'
-        to_email = email
-        email = EmailMessage(subject, message, to=[to_email])
-        email.send()
-
-    def post(self, request, *args, **kwargs):
-        serializer = self.get_serializer(data=request.data)
+    def post(self, request):
+        serializer = self.serializer_class(data=request.data)
         serializer.is_valid(raise_exception=True)
         self.perform_create(serializer)
         user = serializer.instance
         user.save()
-        self.send_activation_email(user.email, user)
+        self.send_activation_email(user)
         # token, created = Token.objects.get_or_create(user=user)
         print(request.data)
         return Response({
@@ -82,8 +67,18 @@ class RegisterUserView(generics.CreateAPIView):
             'username': user.username
         }, status=status.HTTP_201_CREATED)
 
-
-from rest_framework.views import APIView
+    @staticmethod
+    def send_activation_email(user):
+        subject = 'Activate Your Account'
+        message = render_to_string('email.html', {
+            'user': user,
+            'domain': 'localhost:8000',
+            'uid': urlsafe_base64_encode(force_bytes(user.id)),
+            'token': default_token_generator.make_token(user),
+        })
+        to_email = user.email
+        email = EmailMessage(subject, message, to=[to_email])
+        email.send()
 
 
 class LoginView(APIView):
@@ -203,7 +198,6 @@ class TeamSerializer(serializers.ModelSerializer):
 
 class AddTeamMember(generics.CreateAPIView):
     # print(validated_data)
-    print('request a rhi haai 22')
     serializer_class = TeamSerializer
 
 

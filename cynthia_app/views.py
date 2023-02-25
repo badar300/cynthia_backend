@@ -196,12 +196,12 @@ class TeamSerializer(serializers.ModelSerializer):
         return Member.objects.create(**validated_data)
 
 
-class AddTeamMember(generics.CreateAPIView):
-    # print(validated_data)
-    serializer_class = TeamSerializer
-
-
-class TeamListAPIView(generics.ListAPIView):
-    queryset = Member.objects.all()
-    serializer_class = TeamSerializer
+# class AddTeamMember(generics.CreateAPIView):
+#     # print(validated_data)
+#     serializer_class = TeamSerializer
+#
+#
+# class TeamListAPIView(generics.ListAPIView):
+#     queryset = Member.objects.all()
+#     serializer_class = TeamSerializer
 

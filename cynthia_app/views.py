@@ -3,7 +3,7 @@ import json
 from django.contrib.auth import authenticate
 from django.contrib.auth.tokens import default_token_generator
 from django.http import request, JsonResponse, HttpResponse
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 
 # Create your views here.
 from django.template.loader import render_to_string
@@ -114,17 +114,18 @@ def confirm_email(request, uidb64, token):
     if user is not None and default_token_generator.check_token(user, token):
         user.is_active = True
         user.save()
-        response=Response({
-            # 'token': token.key,
-            'active': user.is_active,
-            'user_id': user.id,
-            'username': user.username
-        }, status=status.HTTP_200_OK)
-        response['Content-Type'] = 'application/json'
-        response.accepted_renderer = JSONRenderer()
-        response.accepted_media_type = 'application/json'
-        response.renderer_context = {'some_context_info': 'some_value'}
-        return response
+        # response=Response({
+        #     # 'token': token.key,
+        #     'active': user.is_active,
+        #     'user_id': user.id,
+        #     'username': user.username
+        # }, status=status.HTTP_200_OK)
+        # response['Content-Type'] = 'application/json'
+        # response.accepted_renderer = JSONRenderer()
+        # response.accepted_media_type = 'application/json'
+        # response.renderer_context = {'some_context_info': 'some_value'}
+        # return response
+        return redirect('http://localhost:5173/login')
 
     else:
         return Response({

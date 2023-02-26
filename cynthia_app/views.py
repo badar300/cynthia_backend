@@ -155,7 +155,6 @@ class FeatureSerializer(serializers.ModelSerializer):
         return instance
 
 
-
 class FeaturesViewSet(viewsets.ModelViewSet):
     queryset = Features.objects.all()
     serializer_class = FeatureSerializer
@@ -239,20 +238,21 @@ class TeamsViewSet(viewsets.ModelViewSet):
     authentication_classes = [SessionAuthentication, BasicAuthentication, TokenAuthentication]
     permission_classes = [permissions.IsAuthenticated]
 
-
     def list(self, request):
         queryset = self.get_queryset().filter(user=request.user)
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
+
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
 
-    def delete_feature(self, request, pk=None):
+    def delete(self, request, pk=None):
         team = self.get_object()
         if team.user != request.user:
             return Response({'message': 'Unauthorized'}, status=status.HTTP_401_UNAUTHORIZED)
         team.delete()
         return Response({'message': 'Teams deleted successfully'}, status=status.HTTP_204_NO_CONTENT)
+
     def update(self, request, *args, **kwargs):
         partial = kwargs.pop('partial', False)
         team = self.get_object()

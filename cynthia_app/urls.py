@@ -3,6 +3,7 @@ from .views import *
 from rest_framework import routers
 router = routers.DefaultRouter()
 router.register(r'teams', TeamsViewSet, basename='teams')
+router.register(r'features', FeaturesViewSet, basename='features')
 urlpatterns = [
     path('register', RegisterUserView.as_view(), name='register'),
     path('login', LoginView.as_view(), name='login'),

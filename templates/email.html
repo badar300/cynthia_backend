@@ -1,6 +1,6 @@
 {% autoescape off %}
 Hi {{ user.username }},
 Please click on the link to confirm your registration,
-    <a href="http://{{ domain }}/accounts/confirm-email/{{ uid }}/{{ token }}">Confirm your email address</a>
+    <a href="http://{{ domain }}/confirm-email/{{ uid }}/{{ token }}">Confirm your email address</a>
 
 {% endautoescape %}

@@ -3,7 +3,7 @@ import json
 from django.contrib.auth import authenticate
 from django.contrib.auth.tokens import default_token_generator
 from django.http import request, JsonResponse, HttpResponse
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 
 # Create your views here.
 from django.template.loader import render_to_string
@@ -114,17 +114,18 @@ def confirm_email(request, uidb64, token):
     if user is not None and default_token_generator.check_token(user, token):
         user.is_active = True
         user.save()
-        response=Response({
-            # 'token': token.key,
-            'active': user.is_active,
-            'user_id': user.id,
-            'username': user.username
-        }, status=status.HTTP_200_OK)
-        response['Content-Type'] = 'application/json'
-        response.accepted_renderer = JSONRenderer()
-        response.accepted_media_type = 'application/json'
-        response.renderer_context = {'some_context_info': 'some_value'}
-        return response
+        # response=Response({
+        #     # 'token': token.key,
+        #     'active': user.is_active,
+        #     'user_id': user.id,
+        #     'username': user.username
+        # }, status=status.HTTP_200_OK)
+        # response['Content-Type'] = 'application/json'
+        # response.accepted_renderer = JSONRenderer()
+        # response.accepted_media_type = 'application/json'
+        # response.renderer_context = {'some_context_info': 'some_value'}
+        # return response
+        return redirect('http://localhost:5173/login')
 
     else:
         return Response({
@@ -138,36 +139,35 @@ def confirm_email(request, uidb64, token):
 class FeatureSerializer(serializers.ModelSerializer):
     class Meta:
         model = Features
-        fields = ['feature_id', 'name', 'state', 'estimate_wd', 'comment',"user"]
+        fields = ['feature_id', 'name', 'state', 'estimate_wd', 'comment']
 
     def create(self, validated_data):
-        request = self.context.get('request')
-        feature = Features.objects.create(user=request.user, **validated_data)
+        user = validated_data.pop("user")
+        feature = Features.objects.create(user=user, **validated_data)
         return feature
-
-    def update(self, instance, validated_data):
-        instance.name = validated_data.get('name', instance.name)
-        instance.state = validated_data.get('state', instance.state)
-        instance.estimate_wd = validated_data.get('estimate_wd', instance.estimate_wd)
-        instance.comment = validated_data.get('comment', instance.comment)
-        instance.save()
-        return instance
-
 
 
 class FeaturesViewSet(viewsets.ModelViewSet):
     queryset = Features.objects.all()
     serializer_class = FeatureSerializer
+    authentication_classes = [SessionAuthentication, BasicAuthentication, TokenAuthentication]
     permission_classes = [permissions.IsAuthenticated]
-    def perform_create(self, serializer):
-        serializer.save(request=self.request)
 
-    def delete_feature(self, request, pk=None):
+    def list(self, request):
+        queryset = self.get_queryset().filter(user=request.user)
+        serializer = self.get_serializer(queryset, many=True)
+        return Response(serializer.data)
+
+    def perform_create(self, serializer):
+        serializer.save(user=self.request.user)
+
+    def delete(self, request, pk=None):
         feature = self.get_object()
         if feature.user != request.user:
             return Response({'message': 'Unauthorized'}, status=status.HTTP_401_UNAUTHORIZED)
         feature.delete()
         return Response({'message': 'Feature deleted successfully'}, status=status.HTTP_204_NO_CONTENT)
+
     def update(self, request, *args, **kwargs):
         partial = kwargs.pop('partial', False)
         feature = self.get_object()
@@ -177,10 +177,6 @@ class FeaturesViewSet(viewsets.ModelViewSet):
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(serializer.data)
-def update_feature(request):
-    data = json.loads(request.body.decode('utf-8'))
-    id = data.get('feature_id')
-    User.objects.update_or_create(feature_id=id, **data)
 
 
 def reset_email_link(request):
@@ -238,20 +234,21 @@ class TeamsViewSet(viewsets.ModelViewSet):
     authentication_classes = [SessionAuthentication, BasicAuthentication, TokenAuthentication]
     permission_classes = [permissions.IsAuthenticated]
 
-
     def list(self, request):
         queryset = self.get_queryset().filter(user=request.user)
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
+
     def perform_create(self, serializer):
         serializer.save(user=self.request.user)
 
-    def delete_feature(self, request, pk=None):
+    def delete(self, request, pk=None):
         team = self.get_object()
         if team.user != request.user:
             return Response({'message': 'Unauthorized'}, status=status.HTTP_401_UNAUTHORIZED)
         team.delete()
         return Response({'message': 'Teams deleted successfully'}, status=status.HTTP_204_NO_CONTENT)
+
     def update(self, request, *args, **kwargs):
         partial = kwargs.pop('partial', False)
         team = self.get_object()

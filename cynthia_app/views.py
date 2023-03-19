@@ -23,7 +23,7 @@ from rest_framework.authtoken.models import Token
 from rest_framework import viewsets
 from django.utils.decorators import method_decorator
 
-from cynthia_app.models import Features, Member
+from cynthia_app.models import Features, Member, FeatureAssign
 from cynthia_app.utils import send_reset_email
 
 
@@ -258,3 +258,26 @@ class TeamsViewSet(viewsets.ModelViewSet):
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(serializer.data)
+
+
+class BaseFeatureAssignSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = FeatureAssign
+        fields = "__all__"
+
+
+class FeatureAssignSerializer(serializers.ModelSerializer):
+    assign_list = BaseFeatureAssignSerializer(many=True)
+
+    class Meta:
+        model = Features
+        fields = "__all__"
+
+
+def get_user_features(request):
+    user = request.user
+
+
+
+
+

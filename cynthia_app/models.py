@@ -25,3 +25,10 @@ class Member(models.Model):
 
     def __str__(self):
         return self.name
+
+
+class FeatureAssign(models.Model):
+    feature_id = models.ForeignKey(Features, on_delete=models.CASCADE, null=True, blank=True, related_name='assign_list')
+    assigned_team_count = models.IntegerField(default=1)
+    assigned_date = models.DateField()
+

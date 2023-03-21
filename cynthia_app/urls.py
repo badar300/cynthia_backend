@@ -15,5 +15,6 @@ urlpatterns = [
     path('reset_password', reset_password, name='reset_pass'),
     path('confirm-email/<str:uidb64>/<str:token>/', confirm_email, name='confirm_email'),
     path('get_features', get_user_features, name='get_user_feature'),
+    path('feature-assigin', FeatureAssignView.as_view({"get":"list"}), name='assigin'),
 
 ]+router.urls

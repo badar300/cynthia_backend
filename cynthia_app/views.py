@@ -289,11 +289,9 @@ class FeatureAssignView(viewsets.ModelViewSet):
             for i in range (number_of_days):
                 _dates.append((monday+timedelta(days=i*7)).date())
         return _dates
-    def get_queryset(self):
-        return super().get_queryset()
     def list(self, request, *args, **kwargs):
         user = request.user
-        serializer = self.get_serializer(self.queryset,many=True)
+        serializer = self.get_serializer(self.queryset.filter(user=user),many=True)
         return Response({"dates":self.get_dates(user),"data":serializer.data})
     def update(self, request,pk, *args, **kwargs):
         data =request.data

@@ -4,14 +4,14 @@ from django.contrib.auth import authenticate
 from django.contrib.auth.tokens import default_token_generator
 from django.http import request, JsonResponse, HttpResponse
 from django.shortcuts import render, redirect
-
+from datetime import *
 # Create your views here.
 from django.template.loader import render_to_string
 from django.utils.encoding import force_bytes
 from django.utils.http import urlsafe_base64_encode, urlsafe_base64_decode
 from rest_framework import serializers, status
 from rest_framework.authentication import SessionAuthentication, BasicAuthentication, TokenAuthentication
-
+import math
 from django.contrib.auth.models import User
 from rest_framework import views, permissions, generics
 from rest_framework.exceptions import ValidationError
@@ -22,8 +22,8 @@ from rest_framework.decorators import action
 from rest_framework.authtoken.models import Token
 from rest_framework import viewsets
 from django.utils.decorators import method_decorator
-
-from cynthia_app.models import Features, Member
+from django.views.generic import *
+from cynthia_app.models import Features, Member, FeatureAssign
 from cynthia_app.utils import send_reset_email
 
 
@@ -258,3 +258,54 @@ class TeamsViewSet(viewsets.ModelViewSet):
         serializer.is_valid(raise_exception=True)
         serializer.save()
         return Response(serializer.data)
+
+
+class BaseFeatureAssignSerializer(serializers.ModelSerializer):
+
+    class Meta:
+        model = FeatureAssign
+        fields = "__all__"
+
+class FeatureListSerializer(serializers.ModelSerializer):
+    assign_list = BaseFeatureAssignSerializer(many=True)
+
+    class Meta:
+        model = Features
+        fields = "__all__"
+
+class FeatureAssignView(viewsets.ModelViewSet):
+    serializer_class = FeatureListSerializer
+    queryset = Features.objects.all().order_by("create_at")
+    def get_dates(self,obj):
+        oldest_f= Features.objects.filter(user=obj).order_by("feature_id")[0]
+        latest_f= Features.objects.filter(user=obj).order_by("-feature_id")[0]
+        if oldest_f:
+            two_weeks = oldest_f.create_at - timedelta(days=14)
+            monday = two_weeks - timedelta(days = two_weeks.weekday())
+            number_of_days = (latest_f.create_at - monday).days
+            number_of_days = math.ceil(number_of_days/7)
+            _dates = []
+            number_of_days = 10 if number_of_days< 10 else number_of_days+1
+            for i in range (number_of_days):
+                _dates.append((monday+timedelta(days=i*7)).date())
+        return _dates
+    def list(self, request, *args, **kwargs):
+        user = request.user
+        serializer = self.get_serializer(self.queryset.filter(user=user),many=True)
+        return Response({"dates":self.get_dates(user),"data":serializer.data})
+    def update(self, request,pk, *args, **kwargs):
+        data =request.data
+        data["feature_id"] = pk
+        serializer = BaseFeatureAssignSerializer(data=data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response({"message":"Inserted"},status=status.HTTP_200_OK)
+        else:
+            return Response({"error":serializer.errors},status=status.HTTP_400_BAD_REQUEST)
+def get_user_features(request):
+    user = request.user
+
+
+
+
+

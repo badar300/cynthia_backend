@@ -327,10 +327,5 @@ class FeatureAssignView(viewsets.ModelViewSet):
             return Response({"message": "Inserted"}, status=status.HTTP_200_OK)
         else:
             return Response({"error": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
-def get_user_features(request):
-    user = request.user
-
-
-
 
 

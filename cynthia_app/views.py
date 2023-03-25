@@ -267,6 +267,24 @@ class BaseFeatureAssignSerializer(serializers.ModelSerializer):
         model = FeatureAssign
         fields = "__all__"
 
+    def update(self, instance, validated_data):
+        instance.assigned_team_count = validated_data.get('assigned_team_count', instance.assigned_team_count)
+        instance.assigned_date = validated_data.get('assigned_date', instance.assigned_date)
+        instance.save()
+        return instance
+
+    def create(self, validated_data):
+        feature_id = validated_data.get('feature_id')
+        assigned_team_count = validated_data.get('assigned_team_count')
+        assigned_date = validated_data.get('assigned_date')
+
+        feature_assign = FeatureAssign.objects.create(
+            feature_id=feature_id,
+            assigned_team_count=assigned_team_count,
+            assigned_date=assigned_date
+        )
+        return feature_assign
+
 
 class FeatureListSerializer(serializers.ModelSerializer):
     # assign_list = BaseFeatureAssignSerializer(many=True)
@@ -333,18 +351,30 @@ class FeatureAssignView(viewsets.ModelViewSet):
                 _dates.append((monday+timedelta(days=i*7)).date())
         return _dates
 
-    # def get_planned_fte(self):
-    #     return FeatureAssign.objects.filter(feature_id=obj).aggregate(total=Sum(F('assigned_team_count') * 5))['total']
+    def get_planned_fte(self, dates):
+        available_fte = []
+        for date in dates:
+            available_fte.append(FeatureAssign.objects.filter(assigned_date=date).aggregate(Sum('assigned_team_count'))['assigned_team_count__sum'])
+        return available_fte
 
     def list(self, request, *args, **kwargs):
         user = request.user
+        member_count = Member.objects.filter(user=user).count()
+        dates = self.get_dates(user)
+        planned_fte = self.get_planned_fte(dates)
+        print(planned_fte)
         serializer = self.get_serializer(self.queryset.filter(user=user), many=True)
-        return Response({"dates": self.get_dates(user), "data": serializer.data})
+        return Response({"member_count": member_count, "planned_fte": planned_fte, "dates": dates, "data": serializer.data})
 
     def update(self, request, pk, *args, **kwargs):
-        data =request.data
+        data = request.data
         data["feature_id"] = pk
-        serializer = BaseFeatureAssignSerializer(data=data)
+
+        feature_assign = FeatureAssign.objects.filter(feature_id=pk, assigned_date=data['assigned_date']).first()
+        if feature_assign:
+            serializer = BaseFeatureAssignSerializer(feature_assign, data=data)
+        else:
+            serializer = BaseFeatureAssignSerializer(data=data)
         if serializer.is_valid():
             serializer.save()
             return Response({"message": "Inserted"}, status=status.HTTP_200_OK)

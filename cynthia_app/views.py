@@ -269,7 +269,7 @@ class BaseFeatureAssignSerializer(serializers.ModelSerializer):
 
 
 class FeatureListSerializer(serializers.ModelSerializer):
-    assign_list = BaseFeatureAssignSerializer(many=True)
+    # assign_list = BaseFeatureAssignSerializer(many=True)
     dates = serializers.SerializerMethodField()
     planned = serializers.SerializerMethodField()
 
@@ -291,7 +291,27 @@ class FeatureListSerializer(serializers.ModelSerializer):
             _dates = []
             number_of_days = 10 if number_of_days < 10 else number_of_days+1
             for i in range(number_of_days):
-                _dates.append((monday+timedelta(days=i*7)).date())
+                temp = (monday + timedelta(days=i * 7)).date()
+                feature_assign = FeatureAssign.objects.filter(assigned_date=temp, feature_id=obj).first()
+                if feature_assign:
+                    temp_dict = {
+                        'date': temp,
+                        'assinged_feature': {
+                            'id': feature_assign.id,
+                            'count': feature_assign.assigned_team_count
+                        }
+                    }
+                else:
+                    temp_dict = {
+                        'date': temp,
+                        'assinged_feature': {
+                            'id': '',
+                            'count': ''
+                        }
+                    }
+
+                _dates.append(temp_dict)
+
         return _dates
 
 
@@ -313,6 +333,9 @@ class FeatureAssignView(viewsets.ModelViewSet):
                 _dates.append((monday+timedelta(days=i*7)).date())
         return _dates
 
+    # def get_planned_fte(self):
+    #     return FeatureAssign.objects.filter(feature_id=obj).aggregate(total=Sum(F('assigned_team_count') * 5))['total']
+
     def list(self, request, *args, **kwargs):
         user = request.user
         serializer = self.get_serializer(self.queryset.filter(user=user), many=True)
@@ -327,5 +350,3 @@ class FeatureAssignView(viewsets.ModelViewSet):
             return Response({"message": "Inserted"}, status=status.HTTP_200_OK)
         else:
             return Response({"error": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
-
-

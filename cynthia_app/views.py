@@ -25,6 +25,7 @@ from django.utils.decorators import method_decorator
 from django.views.generic import *
 from cynthia_app.models import Features, Member, FeatureAssign
 from cynthia_app.utils import send_reset_email
+from django.db.models import F, Sum
 
 
 class SignupSerializer(serializers.ModelSerializer):
@@ -268,10 +269,27 @@ class BaseFeatureAssignSerializer(serializers.ModelSerializer):
 
 class FeatureListSerializer(serializers.ModelSerializer):
     assign_list = BaseFeatureAssignSerializer(many=True)
-
+    dates = serializers.SerializerMethodField()
+    planned = serializers.SerializerMethodField()
     class Meta:
         model = Features
         fields = "__all__"
+    
+    def get_planned(self,obj):
+        return FeatureAssign.objects.filter(feature_id=obj).aggregate(total=Sum(F('assigned_team_count')*5))['total']
+    def get_dates(self,obj):
+        oldest_f= Features.objects.filter(user=obj.user).order_by("feature_id")[0]
+        latest_f= Features.objects.filter(user=obj.user).order_by("-feature_id")[0]
+        if oldest_f:
+            two_weeks = oldest_f.create_at - timedelta(days=14)
+            monday = two_weeks - timedelta(days = two_weeks.weekday())
+            number_of_days = (latest_f.create_at - monday).days
+            number_of_days = math.ceil(number_of_days/7)
+            _dates = []
+            number_of_days = 10 if number_of_days< 10 else number_of_days+1
+            for i in range (number_of_days):
+                _dates.append((monday+timedelta(days=i*7)).date())
+        return _dates
 
 class FeatureAssignView(viewsets.ModelViewSet):
     serializer_class = FeatureListSerializer

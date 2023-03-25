@@ -267,59 +267,66 @@ class BaseFeatureAssignSerializer(serializers.ModelSerializer):
         model = FeatureAssign
         fields = "__all__"
 
+
 class FeatureListSerializer(serializers.ModelSerializer):
     assign_list = BaseFeatureAssignSerializer(many=True)
     dates = serializers.SerializerMethodField()
     planned = serializers.SerializerMethodField()
+
     class Meta:
         model = Features
         fields = "__all__"
     
-    def get_planned(self,obj):
+    def get_planned(self, obj):
         return FeatureAssign.objects.filter(feature_id=obj).aggregate(total=Sum(F('assigned_team_count')*5))['total']
-    def get_dates(self,obj):
-        oldest_f= Features.objects.filter(user=obj.user).order_by("feature_id")[0]
-        latest_f= Features.objects.filter(user=obj.user).order_by("-feature_id")[0]
+
+    def get_dates(self, obj):
+        oldest_f = Features.objects.filter(user=obj.user).order_by("feature_id")[0]
+        latest_f = Features.objects.filter(user=obj.user).order_by("-feature_id")[0]
         if oldest_f:
             two_weeks = oldest_f.create_at - timedelta(days=14)
-            monday = two_weeks - timedelta(days = two_weeks.weekday())
+            monday = two_weeks - timedelta(days=two_weeks.weekday())
             number_of_days = (latest_f.create_at - monday).days
             number_of_days = math.ceil(number_of_days/7)
             _dates = []
-            number_of_days = 10 if number_of_days< 10 else number_of_days+1
-            for i in range (number_of_days):
+            number_of_days = 10 if number_of_days < 10 else number_of_days+1
+            for i in range(number_of_days):
                 _dates.append((monday+timedelta(days=i*7)).date())
         return _dates
+
 
 class FeatureAssignView(viewsets.ModelViewSet):
     serializer_class = FeatureListSerializer
     queryset = Features.objects.all().order_by("create_at")
-    def get_dates(self,obj):
-        oldest_f= Features.objects.filter(user=obj).order_by("feature_id")[0]
-        latest_f= Features.objects.filter(user=obj).order_by("-feature_id")[0]
+
+    def get_dates(self, obj):
+        oldest_f = Features.objects.filter(user=obj).order_by("feature_id")[0]
+        latest_f = Features.objects.filter(user=obj).order_by("-feature_id")[0]
         if oldest_f:
             two_weeks = oldest_f.create_at - timedelta(days=14)
-            monday = two_weeks - timedelta(days = two_weeks.weekday())
+            monday = two_weeks - timedelta(days=two_weeks.weekday())
             number_of_days = (latest_f.create_at - monday).days
             number_of_days = math.ceil(number_of_days/7)
             _dates = []
             number_of_days = 10 if number_of_days< 10 else number_of_days+1
-            for i in range (number_of_days):
+            for i in range(number_of_days):
                 _dates.append((monday+timedelta(days=i*7)).date())
         return _dates
+
     def list(self, request, *args, **kwargs):
         user = request.user
-        serializer = self.get_serializer(self.queryset.filter(user=user),many=True)
-        return Response({"dates":self.get_dates(user),"data":serializer.data})
-    def update(self, request,pk, *args, **kwargs):
+        serializer = self.get_serializer(self.queryset.filter(user=user), many=True)
+        return Response({"dates": self.get_dates(user), "data": serializer.data})
+
+    def update(self, request, pk, *args, **kwargs):
         data =request.data
         data["feature_id"] = pk
         serializer = BaseFeatureAssignSerializer(data=data)
         if serializer.is_valid():
             serializer.save()
-            return Response({"message":"Inserted"},status=status.HTTP_200_OK)
+            return Response({"message": "Inserted"}, status=status.HTTP_200_OK)
         else:
-            return Response({"error":serializer.errors},status=status.HTTP_400_BAD_REQUEST)
+            return Response({"error": serializer.errors}, status=status.HTTP_400_BAD_REQUEST)
 def get_user_features(request):
     user = request.user
 

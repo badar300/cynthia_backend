@@ -351,18 +351,22 @@ class FeatureAssignView(viewsets.ModelViewSet):
                 _dates.append((monday+timedelta(days=i*7)).date())
         return _dates
 
-    def get_planned_fte(self, dates):
+    def get_planned_fte(self, dates,user):
         available_fte = []
         for date in dates:
-            available_fte.append(FeatureAssign.objects.filter(assigned_date=date).aggregate(Sum('assigned_team_count'))['assigned_team_count__sum'])
+            color = "green"
+            count = FeatureAssign.objects.filter(assigned_date=date).aggregate(Sum('assigned_team_count'))['assigned_team_count__sum']
+            member_count = Member.objects.filter(user=user).count()
+            if count and member_count < count:
+                color = "red"
+            available_fte.append({"count":count,"color": color})
         return available_fte
 
     def list(self, request, *args, **kwargs):
         user = request.user
         member_count = Member.objects.filter(user=user).count()
         dates = self.get_dates(user)
-        planned_fte = self.get_planned_fte(dates)
-        print(planned_fte)
+        planned_fte = self.get_planned_fte(dates,user)
         serializer = self.get_serializer(self.queryset.filter(user=user), many=True)
         return Response({"member_count": member_count, "planned_fte": planned_fte, "dates": dates, "data": serializer.data})
 

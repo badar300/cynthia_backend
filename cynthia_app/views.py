@@ -60,7 +60,7 @@ class RegisterUserView(generics.CreateAPIView):
     serializer_class = SignupSerializer
 
     def send_activation_email(self, email, user):
-        subject = 'Activate Your Account'
+        subject = 'Activate Your Cynthia Account'
         message = render_to_string('email.html', {
             'user': user,
             'domain': 'localhost:8000',
@@ -155,7 +155,7 @@ class FeaturesViewSet(viewsets.ModelViewSet):
     permission_classes = [permissions.IsAuthenticated]
 
     def list(self, request):
-        queryset = self.get_queryset().filter(user=request.user)
+        queryset = self.get_queryset().filter(user=request.user).order_by('name')
         serializer = self.get_serializer(queryset, many=True)
         return Response(serializer.data)
 

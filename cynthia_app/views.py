@@ -299,8 +299,8 @@ class FeatureListSerializer(serializers.ModelSerializer):
         return FeatureAssign.objects.filter(feature_id=obj).aggregate(total=Sum(F('assigned_team_count')*5))['total']
 
     def get_dates(self, obj):
-        oldest_f = Features.objects.filter(user=obj.user).order_by("feature_id")[0]
-        latest_f = Features.objects.filter(user=obj.user).order_by("-feature_id")[0]
+        oldest_f = Features.objects.filter(user=obj.user).exclude(state='Done').order_by("feature_id")[0]
+        latest_f = Features.objects.filter(user=obj.user).exclude(state='Done').order_by("-feature_id")[0]
         if oldest_f:
             two_weeks = oldest_f.create_at - timedelta(days=14)
             monday = two_weeks - timedelta(days=two_weeks.weekday())
@@ -335,11 +335,11 @@ class FeatureListSerializer(serializers.ModelSerializer):
 
 class FeatureAssignView(viewsets.ModelViewSet):
     serializer_class = FeatureListSerializer
-    queryset = Features.objects.all().order_by("create_at")
+    queryset = Features.objects.all().exclude(state='Done').order_by("name")
 
     def get_dates(self, obj):
-        oldest_f = Features.objects.filter(user=obj).order_by("feature_id")[0]
-        latest_f = Features.objects.filter(user=obj).order_by("-feature_id")[0]
+        oldest_f = Features.objects.filter(user=obj).exclude(state='Done').order_by("feature_id")[0]
+        latest_f = Features.objects.filter(user=obj).exclude(state='Done').order_by("-feature_id")[0]
         if oldest_f:
             two_weeks = oldest_f.create_at - timedelta(days=14)
             monday = two_weeks - timedelta(days=two_weeks.weekday())

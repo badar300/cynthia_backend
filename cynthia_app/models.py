@@ -15,8 +15,8 @@ class Features(models.Model):
     def __str__(self):
         return self.name
     class meta:
-        # verbose_name = "Feature"
-        verbose_name_plural = "Features"
+        verbose_name = "Feature"
+        verbose_name_plural = "Feature"
 
 
 class Member(models.Model):
